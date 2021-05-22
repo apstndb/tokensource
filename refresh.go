@@ -13,16 +13,16 @@ import (
 const defaultInterval = 10 * time.Minute
 
 type forceRefreshTokenSource struct {
-	genFunc     func(ctx context.Context) (oauth2.TokenSource, error)
-	tokenSource oauth2.TokenSource
-	conf        ForceRefreshConfig
-	mu          sync.RWMutex
+	genFunc func(ctx context.Context) (oauth2.TokenSource, error)
+	token   *oauth2.Token
+	conf    ForceRefreshConfig
+	mu      sync.RWMutex
 }
 
 func (ts *forceRefreshTokenSource) Token() (*oauth2.Token, error) {
 	ts.mu.RLock()
 	defer ts.mu.RUnlock()
-	return ts.tokenSource.Token()
+	return ts.token, nil
 }
 
 type ForceRefreshConfig struct {
@@ -47,7 +47,7 @@ func NewForceRefreshTokenSource(ctx context.Context, conf ForceRefreshConfig, ge
 		conf.JitterFunc = jitterbug.Norm{}
 	}
 	b := &forceRefreshTokenSource{genFunc: genFunc, conf: conf}
-	expiry, err := b.flip(ctx);
+	expiry, err := b.flip(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func (ts *forceRefreshTokenSource) flip(ctx context.Context) (time.Time, error) 
 	}
 
 	ts.mu.Lock()
-	ts.tokenSource = tokenSource
+	ts.token = t
 	ts.mu.Unlock()
 	return t.Expiry, nil
 }
