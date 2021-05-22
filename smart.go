@@ -15,7 +15,7 @@ const impSaEnvName = "CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT"
 
 func SmartIDTokenSource(ctx context.Context, audience string) (oauth2.TokenSource, error) {
 	if impSaVal := os.Getenv(impSaEnvName); impSaVal != "" {
-		targetPrincipal, delegates := ParseDelegateChain(impSaVal)
+		targetPrincipal, delegates := parseDelegateChain(impSaVal)
 		idCfg := impersonate.IDTokenConfig{
 			Audience:        audience,
 			TargetPrincipal: targetPrincipal,
@@ -29,11 +29,11 @@ func SmartIDTokenSource(ctx context.Context, audience string) (oauth2.TokenSourc
 	return idtoken.NewTokenSource(ctx, audience)
 }
 
-// ParseDelegateChain split impersonate target principal and delegate chain.
+// parseDelegateChain split impersonate target principal and delegate chain.
 // s must be non-empty string.
-func ParseDelegateChain(s string) (targetPrincipal string, delegates []string) {
+func parseDelegateChain(s string) (targetPrincipal string, delegates []string) {
 	if s == "" {
-		panic("ParseDelegateChain: empty argument")
+		panic("parseDelegateChain: empty argument")
 	}
 	ss := strings.Split(s, ",")
 	return ss[len(ss)-1], ss[:len(ss)-1]
@@ -41,7 +41,7 @@ func ParseDelegateChain(s string) (targetPrincipal string, delegates []string) {
 
 func SmartAccessTokenSource(ctx context.Context, scopes ...string) (oauth2.TokenSource, error) {
 	if impSaVal := os.Getenv(impSaEnvName); impSaVal != "" {
-		targetPrincipal, delegates := ParseDelegateChain(impSaVal)
+		targetPrincipal, delegates := parseDelegateChain(impSaVal)
 		return impersonate.CredentialsTokenSource(ctx, impersonate.CredentialsConfig{
 			TargetPrincipal: targetPrincipal,
 			Delegates:       delegates,
