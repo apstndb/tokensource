@@ -42,6 +42,7 @@ type AsyncRefreshingConfig struct {
 
 // NewAsyncRefreshingTokenSource create TokenSource with the refresh config conf and the TokenSource generator function genFunc.
 // genFunc will be called to generate the one-time TokenSource instance every time to refresh.
+// Note: NewAsyncRefreshingTokenSource fetches the first token synchronously.
 func NewAsyncRefreshingTokenSource(ctx context.Context, conf AsyncRefreshingConfig, genFunc func(ctx context.Context) (oauth2.TokenSource, error)) (oauth2.TokenSource, error) {
 	if conf.RefreshInterval == 0 {
 		conf.RefreshInterval = defaultInterval
