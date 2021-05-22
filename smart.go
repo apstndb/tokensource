@@ -13,6 +13,7 @@ import (
 
 const impSaEnvName = "CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT"
 
+// SmartIDTokenSource generate oauth2.TokenSource which generates ID token and supports CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT environment variable.
 func SmartIDTokenSource(ctx context.Context, audience string) (oauth2.TokenSource, error) {
 	if impSaVal := os.Getenv(impSaEnvName); impSaVal != "" {
 		targetPrincipal, delegates := parseDelegateChain(impSaVal)
@@ -39,6 +40,7 @@ func parseDelegateChain(s string) (targetPrincipal string, delegates []string) {
 	return ss[len(ss)-1], ss[:len(ss)-1]
 }
 
+// SmartAccessTokenSource generate oauth2.TokenSource which generates access token and supports CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT environment variable.
 func SmartAccessTokenSource(ctx context.Context, scopes ...string) (oauth2.TokenSource, error) {
 	if impSaVal := os.Getenv(impSaEnvName); impSaVal != "" {
 		targetPrincipal, delegates := parseDelegateChain(impSaVal)
