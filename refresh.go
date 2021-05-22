@@ -30,6 +30,7 @@ type ForceRefreshConfig struct {
 	// If it is zero value, TokenSource don't care about Expiry.
 	BeforeExpiryMargin time.Duration
 	// RefreshInterval is interval for refreshing token if Expiry based refreshing is not applied.
+	// If not set, 10 minutes is default interval.
 	RefreshInterval time.Duration
 	// JitterFunc is jitter function for RefreshInterval and BeforeExpiryMargin.
 	// It is compatible with https://pkg.go.dev/github.com/lthibault/jitterbug#Jitter.
