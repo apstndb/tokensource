@@ -25,6 +25,7 @@ func (ts *forceRefreshTokenSource) Token() (*oauth2.Token, error) {
 	return ts.token, nil
 }
 
+// ForceRefreshConfig is the refresh configuration of NewForceRefreshTokenSource.
 type ForceRefreshConfig struct {
 	// BeforeExpiryMargin A is the margin for refreshing the token before Expiry.
 	// If it is zero value, TokenSource don't care about Expiry.
@@ -39,6 +40,8 @@ type ForceRefreshConfig struct {
 	}
 }
 
+// NewForceRefreshTokenSource create TokenSource with the refresh config conf and the TokenSource generator function genFunc.
+// genFunc will be called to generate the one-time TokenSource instance every time to refresh.
 func NewForceRefreshTokenSource(ctx context.Context, conf ForceRefreshConfig, genFunc func(ctx context.Context) (oauth2.TokenSource, error)) (oauth2.TokenSource, error) {
 	if conf.RefreshInterval == 0 {
 		conf.RefreshInterval = defaultInterval
