@@ -11,11 +11,12 @@ import (
 	"golang.org/x/oauth2"
 )
 
-const defaultInterval = 10 * time.Minute
+const defaultInterval = 30 * time.Minute
 
 type AsyncRefreshingTokenSource struct {
 	genFunc func(ctx context.Context) (oauth2.TokenSource, error)
 	token   *oauth2.Token
+	err     error
 	conf    AsyncRefreshingConfig
 	mu      sync.Mutex
 }
@@ -23,7 +24,7 @@ type AsyncRefreshingTokenSource struct {
 func (ts *AsyncRefreshingTokenSource) Token() (*oauth2.Token, error) {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
-	return ts.token, nil
+	return ts.token, ts.err
 }
 
 // AsyncRefreshingConfig is the refresh configuration of NewAsyncRefreshingTokenSource.
@@ -35,7 +36,7 @@ type AsyncRefreshingConfig struct {
 	RandomizationFactorForMarginBeforeExpiry float64
 
 	// RefreshInterval is interval for refreshing token if Expiry based refreshing is not applied.
-	// If not set, 10 minutes is default interval.
+	// If not set, 30 minutes is default interval.
 	RefreshInterval time.Duration
 	// RandomizationFactorForRefreshInterval is randomization factor for RefreshInterval.
 	RandomizationFactorForRefreshInterval float64
@@ -80,13 +81,15 @@ func (ts *AsyncRefreshingTokenSource) flip(ctx context.Context) (time.Time, erro
 		token = t
 		return nil
 	}, ts.conf.Backoff)
-	if err != nil {
-		return time.Time{}, err
-	}
 
 	ts.mu.Lock()
 	ts.token = token
+	ts.err = err
 	ts.mu.Unlock()
+
+	if err != nil {
+		return time.Time{}, err
+	}
 	return token.Expiry, nil
 }
 
@@ -124,8 +127,7 @@ loop:
 
 		expiry, err := ts.flip(ctx)
 		if err != nil {
-			// TODO: Implement exponential backoff and don't panic
-			log.Fatalln(err)
+			log.Println("AsyncRefreshingTokenSource encounter unresolved error:", err)
 		}
 		waitUntilExpiryC = handleExpiry(expiry)
 	}
