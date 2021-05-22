@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
+	"log"
 	"time"
 
 	"github.com/apstndb/tokensource"
@@ -25,27 +25,30 @@ func _main() error {
 
 	ctx := context.Background()
 
-	tokenSource, err := tokensource.NewForceRefreshTokenSource(ctx, 30 * time.Second, func(ctx context.Context) (oauth2.TokenSource, error) {
-		if *aud != "" {
+	var generatorFunc func(context.Context) (oauth2.TokenSource, error)
+	if *aud != "" {
+		generatorFunc = func(ctx context.Context) (oauth2.TokenSource, error) {
 			return tokensource.SmartIDTokenSource(ctx, *aud)
-		} else {
+		}
+	} else {
+		generatorFunc = func(ctx context.Context) (oauth2.TokenSource, error) {
 			return tokensource.SmartAccessTokenSource(ctx, cloudPlatformScope)
 		}
-	})
+	}
+	tokenSource, err := tokensource.NewForceRefreshTokenSource(ctx, tokensource.ForceRefreshConfig{RefreshInterval: 30 * time.Second}, generatorFunc)
 	if err != nil {
 		return err
 	}
-	go tokenSource.Run(ctx)
 
 	ticker := time.NewTicker(10 * time.Second)
 	for {
-		<- ticker.C
 		begin := time.Now()
 		t, err := tokenSource.Token()
 		if err != nil {
 			return err
 		}
 		end := time.Now()
-		fmt.Printf("latency: %v, expiry: %v\n", end.Sub(begin), t.Expiry.Format(time.RFC3339Nano))
+		log.Printf("latency: %v, expiry: %v", end.Sub(begin), t.Expiry.Format(time.RFC3339Nano))
+		<-ticker.C
 	}
 }
