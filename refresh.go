@@ -16,12 +16,12 @@ type AsyncRefreshingTokenSource struct {
 	genFunc func(ctx context.Context) (oauth2.TokenSource, error)
 	token   *oauth2.Token
 	conf    AsyncRefreshingConfig
-	mu      sync.RWMutex
+	mu      sync.Mutex
 }
 
 func (ts *AsyncRefreshingTokenSource) Token() (*oauth2.Token, error) {
-	ts.mu.RLock()
-	defer ts.mu.RUnlock()
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
 	return ts.token, nil
 }
 
