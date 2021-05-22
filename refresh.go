@@ -12,21 +12,21 @@ import (
 
 const defaultInterval = 10 * time.Minute
 
-type forceRefreshTokenSource struct {
+type AsyncRefreshingTokenSource struct {
 	genFunc func(ctx context.Context) (oauth2.TokenSource, error)
 	token   *oauth2.Token
-	conf    ForceRefreshConfig
+	conf    AsyncRefreshingConfig
 	mu      sync.RWMutex
 }
 
-func (ts *forceRefreshTokenSource) Token() (*oauth2.Token, error) {
+func (ts *AsyncRefreshingTokenSource) Token() (*oauth2.Token, error) {
 	ts.mu.RLock()
 	defer ts.mu.RUnlock()
 	return ts.token, nil
 }
 
-// ForceRefreshConfig is the refresh configuration of NewForceRefreshTokenSource.
-type ForceRefreshConfig struct {
+// AsyncRefreshingConfig is the refresh configuration of NewAsyncRefreshingTokenSource.
+type AsyncRefreshingConfig struct {
 	// BeforeExpiryMargin A is the margin for refreshing the token before Expiry.
 	// If it is zero value, TokenSource don't care about Expiry.
 	BeforeExpiryMargin time.Duration
@@ -40,16 +40,16 @@ type ForceRefreshConfig struct {
 	}
 }
 
-// NewForceRefreshTokenSource create TokenSource with the refresh config conf and the TokenSource generator function genFunc.
+// NewAsyncRefreshingTokenSource create TokenSource with the refresh config conf and the TokenSource generator function genFunc.
 // genFunc will be called to generate the one-time TokenSource instance every time to refresh.
-func NewForceRefreshTokenSource(ctx context.Context, conf ForceRefreshConfig, genFunc func(ctx context.Context) (oauth2.TokenSource, error)) (oauth2.TokenSource, error) {
+func NewAsyncRefreshingTokenSource(ctx context.Context, conf AsyncRefreshingConfig, genFunc func(ctx context.Context) (oauth2.TokenSource, error)) (oauth2.TokenSource, error) {
 	if conf.RefreshInterval == 0 {
 		conf.RefreshInterval = defaultInterval
 	}
 	if conf.JitterFunc == nil {
 		conf.JitterFunc = jitterbug.Norm{}
 	}
-	b := &forceRefreshTokenSource{genFunc: genFunc, conf: conf}
+	b := &AsyncRefreshingTokenSource{genFunc: genFunc, conf: conf}
 	expiry, err := b.flip(ctx)
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func NewForceRefreshTokenSource(ctx context.Context, conf ForceRefreshConfig, ge
 	return b, nil
 }
 
-func (ts *forceRefreshTokenSource) flip(ctx context.Context) (time.Time, error) {
+func (ts *AsyncRefreshingTokenSource) flip(ctx context.Context) (time.Time, error) {
 	tokenSource, err := ts.genFunc(ctx)
 	if err != nil {
 		return time.Time{}, err
@@ -74,7 +74,7 @@ func (ts *forceRefreshTokenSource) flip(ctx context.Context) (time.Time, error) 
 	return t.Expiry, nil
 }
 
-func (ts *forceRefreshTokenSource) run(ctx context.Context, initialExpiry time.Time) {
+func (ts *AsyncRefreshingTokenSource) run(ctx context.Context, initialExpiry time.Time) {
 	ticker := jitterbug.New(ts.conf.RefreshInterval, ts.conf.JitterFunc)
 	defer ticker.Stop()
 

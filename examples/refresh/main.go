@@ -35,7 +35,7 @@ func _main() error {
 			return tokensource.SmartAccessTokenSource(ctx, cloudPlatformScope)
 		}
 	}
-	tokenSource, err := tokensource.NewForceRefreshTokenSource(ctx, tokensource.ForceRefreshConfig{RefreshInterval: 30 * time.Second}, generatorFunc)
+	tokenSource, err := tokensource.NewAsyncRefreshingTokenSource(ctx, tokensource.AsyncRefreshingConfig{RefreshInterval: 30 * time.Second}, generatorFunc)
 	if err != nil {
 		return err
 	}
