@@ -21,7 +21,7 @@ func SmartIDTokenSource(ctx context.Context, audience string) (oauth2.TokenSourc
 			TargetPrincipal: targetPrincipal,
 			Delegates:       delegates,
 			// Cloud IAP requires email claim.
-			IncludeEmail:    true,
+			IncludeEmail: true,
 		}
 		return impersonate.IDTokenSource(ctx, idCfg)
 	}
