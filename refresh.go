@@ -46,10 +46,11 @@ func NewForceRefreshTokenSource(ctx context.Context, conf ForceRefreshConfig, ge
 		conf.JitterFunc = jitterbug.Norm{}
 	}
 	b := &forceRefreshTokenSource{genFunc: genFunc, conf: conf}
-	if _, err := b.flip(ctx); err != nil {
+	expiry, err := b.flip(ctx);
+	if err != nil {
 		return nil, err
 	}
-	go b.run(ctx)
+	go b.run(ctx, expiry)
 	return b, nil
 }
 
@@ -69,7 +70,7 @@ func (ts *forceRefreshTokenSource) flip(ctx context.Context) (time.Time, error) 
 	return t.Expiry, nil
 }
 
-func (ts *forceRefreshTokenSource) run(ctx context.Context) {
+func (ts *forceRefreshTokenSource) run(ctx context.Context, initialExpiry time.Time) {
 	ticker := jitterbug.New(ts.conf.RefreshInterval, ts.conf.JitterFunc)
 	defer ticker.Stop()
 
@@ -82,8 +83,7 @@ func (ts *forceRefreshTokenSource) run(ctx context.Context) {
 		}
 	}
 
-	token, _ := ts.Token()
-	waitUntilExpiryC := handleExpiry(token.Expiry)
+	waitUntilExpiryC := handleExpiry(initialExpiry)
 
 loop:
 	for {
