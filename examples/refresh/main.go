@@ -39,7 +39,11 @@ func _main() error {
 	tokenSource, err := tokensource.NewAsyncRefreshingTokenSource(ctx, tokensource.AsyncRefreshingConfig{
 		RandomizationFactorForRefreshInterval: 0.5,
 		RefreshInterval:                       30 * time.Second,
-		Backoff: func() backoff.BackOff{b := backoff.NewExponentialBackOff();b.MaxElapsedTime = 1 * time.Minute; return b}(),
+		Backoff: func() backoff.BackOff {
+			b := backoff.NewExponentialBackOff()
+			b.MaxElapsedTime = 1 * time.Minute
+			return b
+		}(),
 	}, generatorFunc)
 	if err != nil {
 		return err
