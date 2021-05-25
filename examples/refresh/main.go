@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/apstndb/tokensource"
+	"github.com/cenkalti/backoff/v4"
 
 	"golang.org/x/oauth2"
 )
@@ -38,6 +39,7 @@ func _main() error {
 	tokenSource, err := tokensource.NewAsyncRefreshingTokenSource(ctx, tokensource.AsyncRefreshingConfig{
 		RandomizationFactorForRefreshInterval: 0.5,
 		RefreshInterval:                       30 * time.Second,
+		Backoff: func() backoff.BackOff{b := backoff.NewExponentialBackOff();b.MaxElapsedTime = 1 * time.Minute; return b}(),
 	}, generatorFunc)
 	if err != nil {
 		return err

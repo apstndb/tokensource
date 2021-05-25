@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"math/rand"
+	"os"
 	"sync"
 	"time"
 
@@ -16,15 +17,29 @@ const defaultInterval = 30 * time.Minute
 type AsyncRefreshingTokenSource struct {
 	genFunc func(ctx context.Context) (oauth2.TokenSource, error)
 	token   *oauth2.Token
-	err     error
 	conf    AsyncRefreshingConfig
 	mu      sync.Mutex
+	// ctx is stored because genFunc use context.Context but TokenSource.Token() doesn't take context.Context.
+	ctx context.Context
 }
 
 func (ts *AsyncRefreshingTokenSource) Token() (*oauth2.Token, error) {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
-	return ts.token, ts.err
+	if ts.token.Valid() {
+		return ts.token, nil
+	}
+	tokenSource, err := ts.genFunc(ts.ctx)
+	if err != nil {
+		return nil, err
+	}
+	token, err := tokenSource.Token()
+	// Don't perform exponential backoff because this method doesn't take current context.
+	if err != nil {
+		return nil, err
+	}
+	ts.token = token
+	return ts.token, nil
 }
 
 // AsyncRefreshingConfig is the refresh configuration of NewAsyncRefreshingTokenSource.
@@ -44,7 +59,12 @@ type AsyncRefreshingConfig struct {
 	// Backoff is backoff configuration for TokenSource.Token().
 	// If not set, backoff.NewExponentialBackOff is used as the default value.
 	// See also https://pkg.go.dev/github.com/cenkalti/backoff/v4#NewExponentialBackOff.
+	// If IsRetryable isn't set, no backoff will be performed.
 	Backoff backoff.BackOff
+
+	// IsRetryable is the predicate function for retryable errors.
+	// Default: never retry.
+	IsRetryable func(err error) bool
 }
 
 // NewAsyncRefreshingTokenSource create TokenSource with the refresh config conf and the TokenSource generator function genFunc.
@@ -76,6 +96,12 @@ func (ts *AsyncRefreshingTokenSource) flip(ctx context.Context) (time.Time, erro
 
 		t, err := tokenSource.Token()
 		if err != nil {
+			if os.Getenv("DEBUG") != "" {
+				log.Printf("AsyncRefreshingTokenSource.flip() error: %v", err)
+			}
+			if ts.conf.IsRetryable == nil || !ts.conf.IsRetryable(err) {
+				return backoff.Permanent(err)
+			}
 			return err
 		}
 		token = t
@@ -84,7 +110,6 @@ func (ts *AsyncRefreshingTokenSource) flip(ctx context.Context) (time.Time, erro
 
 	ts.mu.Lock()
 	ts.token = token
-	ts.err = err
 	ts.mu.Unlock()
 
 	if err != nil {
