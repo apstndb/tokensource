@@ -2,7 +2,7 @@
 
 This repository contains some `oauth2.TokenSource`.
 
-### `NewAsyncRefreshingTokenSource`
+### `AsyncRefreshingTokenSource`
 
 This TokenSource refreshes the token asynchronously to avoid blocking.
 

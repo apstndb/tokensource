@@ -36,7 +36,7 @@ func _main() error {
 			return tokensource.SmartAccessTokenSource(ctx, cloudPlatformScope)
 		}
 	}
-	tokenSource, err := tokensource.NewAsyncRefreshingTokenSource(ctx, tokensource.AsyncRefreshingConfig{
+	tokenSource, err := tokensource.AsyncRefreshingTokenSource(ctx, tokensource.AsyncRefreshingConfig{
 		RandomizationFactorForRefreshInterval: 0.5,
 		RefreshInterval:                       30 * time.Second,
 		Backoff: func() backoff.BackOff {

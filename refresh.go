@@ -14,7 +14,7 @@ import (
 
 const defaultInterval = 30 * time.Minute
 
-type AsyncRefreshingTokenSource struct {
+type asyncRefreshingTokenSource struct {
 	genFunc func(ctx context.Context) (oauth2.TokenSource, error)
 	token   *oauth2.Token
 	conf    AsyncRefreshingConfig
@@ -23,7 +23,7 @@ type AsyncRefreshingTokenSource struct {
 	ctx context.Context
 }
 
-func (ts *AsyncRefreshingTokenSource) Token() (*oauth2.Token, error) {
+func (ts *asyncRefreshingTokenSource) Token() (*oauth2.Token, error) {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
 	if ts.token.Valid() {
@@ -42,7 +42,7 @@ func (ts *AsyncRefreshingTokenSource) Token() (*oauth2.Token, error) {
 	return ts.token, nil
 }
 
-// AsyncRefreshingConfig is the refresh configuration of NewAsyncRefreshingTokenSource.
+// AsyncRefreshingConfig is the refresh configuration of AsyncRefreshingTokenSource.
 type AsyncRefreshingConfig struct {
 	// MarginBeforeExpiry is the margin for refreshing the token before Expiry.
 	// If it is zero value, TokenSource don't care about Expiry.
@@ -67,17 +67,17 @@ type AsyncRefreshingConfig struct {
 	IsRetryable func(err error) bool
 }
 
-// NewAsyncRefreshingTokenSource create TokenSource with the refresh config conf and the TokenSource generator function genFunc.
+// AsyncRefreshingTokenSource create TokenSource with the refresh config conf and the TokenSource generator function genFunc.
 // genFunc will be called to generate the one-time TokenSource instance every time to refresh.
-// Note: NewAsyncRefreshingTokenSource fetches the first token synchronously.
-func NewAsyncRefreshingTokenSource(ctx context.Context, conf AsyncRefreshingConfig, genFunc func(ctx context.Context) (oauth2.TokenSource, error)) (oauth2.TokenSource, error) {
+// Note: AsyncRefreshingTokenSource fetches the first token synchronously.
+func AsyncRefreshingTokenSource(ctx context.Context, conf AsyncRefreshingConfig, genFunc func(ctx context.Context) (oauth2.TokenSource, error)) (oauth2.TokenSource, error) {
 	if conf.RefreshInterval == 0 {
 		conf.RefreshInterval = defaultInterval
 	}
 	if conf.Backoff == nil {
 		conf.Backoff = backoff.NewExponentialBackOff()
 	}
-	b := &AsyncRefreshingTokenSource{genFunc: genFunc, conf: conf}
+	b := &asyncRefreshingTokenSource{genFunc: genFunc, conf: conf}
 	expiry, err := b.flip(ctx)
 	if err != nil {
 		return nil, err
@@ -86,7 +86,7 @@ func NewAsyncRefreshingTokenSource(ctx context.Context, conf AsyncRefreshingConf
 	return b, nil
 }
 
-func (ts *AsyncRefreshingTokenSource) flip(ctx context.Context) (time.Time, error) {
+func (ts *asyncRefreshingTokenSource) flip(ctx context.Context) (time.Time, error) {
 	var token *oauth2.Token
 	err := backoff.Retry(func() error {
 		tokenSource, err := ts.genFunc(ctx)
@@ -97,7 +97,7 @@ func (ts *AsyncRefreshingTokenSource) flip(ctx context.Context) (time.Time, erro
 		t, err := tokenSource.Token()
 		if err != nil {
 			if os.Getenv("DEBUG") != "" {
-				log.Printf("AsyncRefreshingTokenSource.flip() error: %v", err)
+				log.Printf("asyncRefreshingTokenSource.flip() error: %v", err)
 			}
 			if ts.conf.IsRetryable == nil || !ts.conf.IsRetryable(err) {
 				return backoff.Permanent(err)
@@ -118,7 +118,7 @@ func (ts *AsyncRefreshingTokenSource) flip(ctx context.Context) (time.Time, erro
 	return token.Expiry, nil
 }
 
-func (ts *AsyncRefreshingTokenSource) run(ctx context.Context, initialExpiry time.Time) {
+func (ts *asyncRefreshingTokenSource) run(ctx context.Context, initialExpiry time.Time) {
 	ticker := tickerWithJitter(ts.conf.RefreshInterval, ts.conf.RandomizationFactorForRefreshInterval)
 	defer ticker.Stop()
 
@@ -152,7 +152,7 @@ loop:
 
 		expiry, err := ts.flip(ctx)
 		if err != nil {
-			log.Println("AsyncRefreshingTokenSource encounter unresolved error:", err)
+			log.Println("asyncRefreshingTokenSource encounter unresolved error:", err)
 		}
 		waitUntilExpiryC = handleExpiry(expiry)
 	}
