@@ -10,5 +10,7 @@ refs: https://qiita.com/kazegusuri/items/b6123f9d3e0777d0750c#reusetokensource%E
 
 ### `SmartIDTokenSource` `SmartIDTokenSource`
 
+(DEPRECATED) They have moved to https://github.com/apstndb/adcplus.
+
 They perform [ADC](https://google.aip.dev/auth/4110).
 Additionally, they perform impersonation when `CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT` is set.
